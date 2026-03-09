@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login | Blood Management</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Segoe UI',sans-serif;
+}
+
+body{
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background:linear-gradient(135deg,#1e293b,#0f172a);
+}
+
+.container{
+display:flex;
+width:900px;
+height:500px;
+border-radius:15px;
+overflow:hidden;
+box-shadow:0 20px 50px rgba(0,0,0,0.4);
+background:white;
+}
+
+/* LEFT SIDE */
+.left{
+flex:1;
+background:linear-gradient(180deg,#1e293b,#0f172a);
+color:white;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+padding:40px;
+text-align:center;
+}
+
+.left h1{
+font-size:28px;
+margin-bottom:20px;
+}
+
+.left p{
+color:#cbd5e1;
+}
+
+/* RIGHT SIDE */
+.right{
+flex:1;
+padding:60px 40px;
+display:flex;
+flex-direction:column;
+justify-content:center;
+}
+
+.right h2{
+margin-bottom:30px;
+color:#1e293b;
+}
+
+.input-group{
+position:relative;
+margin-bottom:20px;
+}
+
+.input-group i{
+position:absolute;
+top:50%;
+left:12px;
+transform:translateY(-50%);
+color:#64748b;
+}
+
+input{
+width:100%;
+padding:12px 12px 12px 40px;
+border-radius:8px;
+border:1px solid #ddd;
+outline:none;
+transition:0.3s;
+}
+
+input:focus{
+border-color:#3b82f6;
+}
+
+button{
+padding:12px;
+border:none;
+border-radius:8px;
+background:#3b82f6;
+color:white;
+cursor:pointer;
+font-size:15px;
+transition:0.3s;
+}
+
+button:hover{
+background:#2563eb;
+}
+
+.register{
+margin-top:15px;
+font-size:14px;
+}
+
+.register a{
+color:#3b82f6;
+text-decoration:none;
+font-weight:600;
+}
+
+#msg{
+margin-top:15px;
+font-size:14px;
+color:red;
+}
+
+/* Responsive */
+@media(max-width:768px){
+.container{
+flex-direction:column;
+height:auto;
+width:95%;
+}
+.left{
+padding:20px;
+}
+.right{
+padding:30px;
+}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- LEFT PANEL -->
+<div class="left">
+<i class="fa-solid fa-droplet fa-3x" style="margin-bottom:20px;"></i>
+<h1>Blood Management System</h1>
+<p>Connecting donors and patients efficiently & safely.</p>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="right">
+<h2>Login to Your Account</h2>
+
+<div class="input-group">
+<i class="fa-solid fa-envelope"></i>
+<input type="email" id="email" placeholder="Email">
+</div>
+
+<div class="input-group">
+<i class="fa-solid fa-lock"></i>
+<input type="password" id="password" placeholder="Password">
+</div>
+
+<button onclick="login()">Login</button>
+
+<p class="register">
+Don't have account? <a href="register.html">Register</a>
+</p>
+
+<p id="msg"></p>
+
+</div>
+</div>
+
+<script>
+
+async function login(){
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const msg = document.getElementById("msg");
+
+  msg.style.color = "red";
+  msg.innerText = "";
+
+  if(!email || !password){
+    msg.innerText = "Please fill all fields";
+    return;
+  }
+
+  try{
+
+    const res = await fetch("http://localhost:5000/api/auth/login",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    if(!res.ok){
+      msg.innerText = data.message || "Login failed";
+      return;
+    }
+
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("role", data.role);
+
+    msg.style.color = "green";
+    msg.innerText = "Login successful! Redirecting...";
+
+    setTimeout(()=>{
+      if(data.role==="admin") location="admin.html";
+      else if(data.role==="donor") location="donor.html";
+      else if(data.role==="patient") location="patient.html";
+      else if(data.role==="hospital") location="hospital.html";
+    },1000);
+
+  }catch(err){
+    msg.innerText = "Server not running";
+  }
+}
+
+</script>
+
+</body>
+</html>

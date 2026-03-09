@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Hospital Dashboard | Blood Management</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+margin:0;
+font-family:'Segoe UI',sans-serif;
+background:#0f172a;
+color:white;
+}
+
+header{
+background:#1e293b;
+padding:15px 25px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+header h2{
+margin:0;
+}
+
+button{
+padding:8px 14px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+font-weight:600;
+}
+
+.logout{
+background:#ef4444;
+color:white;
+}
+
+.container{
+padding:20px;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+}
+
+.card{
+background:#1e293b;
+padding:15px;
+border-radius:10px;
+box-shadow:0 5px 15px rgba(0,0,0,0.4);
+}
+
+.card h3{
+margin-top:0;
+border-bottom:1px solid #334155;
+padding-bottom:8px;
+}
+
+.request-card, .donor-card{
+background:#0f172a;
+padding:12px;
+border-radius:8px;
+margin-bottom:10px;
+border:1px solid #334155;
+}
+
+.approve{
+background:#22c55e;
+color:white;
+margin-top:8px;
+}
+
+.status{
+padding:3px 8px;
+border-radius:5px;
+font-size:12px;
+font-weight:bold;
+}
+
+.pending{ background:#facc15; color:black; }
+.approved{ background:#22c55e; }
+
+.search-box{
+width:100%;
+padding:8px;
+margin-bottom:12px;
+border-radius:6px;
+border:none;
+outline:none;
+}
+
+@media(max-width:768px){
+.container{
+grid-template-columns:1fr;
+}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>🏥 Hospital Dashboard</h2>
+<button class="logout" onclick="logout()">Logout</button>
+</header>
+
+<div class="container">
+
+<!-- Blood Requests -->
+<div class="card">
+<h3>🩸 Blood Requests</h3>
+<div id="requestList"></div>
+</div>
+
+<!-- Donor Details -->
+<div class="card">
+<h3>👤 Donor Details</h3>
+
+<input 
+type="text"
+id="searchDonor"
+class="search-box"
+placeholder="Search by name or blood group..."
+onkeyup="filterDonors()"
+/>
+
+<div id="donorList"></div>
+
+</div>
+
+</div>
+
+<script>
+
+const API = "http://localhost:5000/api";
+const token = localStorage.getItem("token");
+const role = localStorage.getItem("role");
+
+let allDonors = [];
+
+/* Protect Page */
+if (!token || role !== "hospital") {
+alert("Access Denied");
+location = "login.html";
+}
+
+/* =============================
+LOAD BLOOD REQUESTS
+============================= */
+
+async function loadRequests(){
+
+try{
+
+const res = await fetch(`${API}/hospital/requests`,{
+headers:{
+Authorization:`Bearer ${token}`
+}
+});
+
+const result = await res.json();
+
+const container = document.getElementById("requestList");
+container.innerHTML="";
+
+if(!result.success){
+container.innerHTML="<p>❌ Failed to load requests</p>";
+return;
+}
+
+const requests = result.data;
+
+if(requests.length===0){
+container.innerHTML="<p>No blood requests found.</p>";
+return;
+}
+
+requests.forEach(req=>{
+
+container.innerHTML+=`
+
+<div class="request-card">
+
+<p><b>Blood Group:</b> ${req.bloodGroup}</p>
+
+<p><b>Patient:</b> ${req.patient?.name || "N/A"}</p>
+
+<p>
+<b>Status:</b>
+<span class="status ${req.status==="Pending"?"pending":"approved"}">
+${req.status}
+</span>
+</p>
+
+${req.status==="Pending"?`
+<button class="approve" onclick="approveRequest('${req._id}')">
+Approve
+</button>
+`:""}
+
+</div>
+
+`;
+
+});
+
+}catch(err){
+
+console.error("Request Load Error:",err);
+
+}
+
+}
+
+/* =============================
+APPROVE REQUEST
+============================= */
+
+async function approveRequest(id){
+
+try{
+
+const res = await fetch(`${API}/hospital/approve/${id}`,{
+
+method:"PUT",
+
+headers:{
+Authorization:`Bearer ${token}`
+}
+
+});
+
+const result = await res.json();
+
+if(!result.success){
+alert(result.message || "Approval failed");
+return;
+}
+
+alert("✅ Request Approved");
+
+loadRequests();
+loadDonors();
+
+}catch(err){
+
+console.error("Approve Error:",err);
+
+}
+
+}
+
+/* =============================
+LOAD DONORS
+============================= */
+
+async function loadDonors(){
+
+try{
+
+const res = await fetch(`${API}/hospital/donors`,{
+
+headers:{
+Authorization:`Bearer ${token}`
+}
+
+});
+
+const result = await res.json();
+
+const container=document.getElementById("donorList");
+container.innerHTML="";
+
+if(!result.success){
+container.innerHTML="<p>❌ Failed to load donors</p>";
+return;
+}
+
+allDonors=result.data;
+
+displayDonors(allDonors);
+
+}catch(err){
+
+console.error("Donor Load Error:",err);
+
+}
+
+}
+
+/* =============================
+DISPLAY DONORS
+============================= */
+
+function displayDonors(donors){
+
+const container=document.getElementById("donorList");
+container.innerHTML="";
+
+if(donors.length===0){
+
+container.innerHTML="<p>No donors found.</p>";
+return;
+
+}
+
+donors.forEach(donor=>{
+
+container.innerHTML+=`
+
+<div class="donor-card">
+
+<p><b>Name:</b> ${donor.name}</p>
+
+<p><b>Blood Group:</b> ${donor.bloodGroup}</p>
+
+<p><b>Email:</b> ${donor.email || "N/A"}</p>
+
+<p><b>Phone:</b> ${donor.contactNumber || "N/A"}</p>
+
+<p><b>Location:</b> ${donor.location || "N/A"}</p>
+
+</div>
+
+`;
+
+});
+
+}
+
+/* =============================
+FILTER DONORS
+============================= */
+
+function filterDonors(){
+
+const search=document
+.getElementById("searchDonor")
+.value
+.toLowerCase();
+
+const filtered=allDonors.filter(donor=>
+
+donor.name.toLowerCase().includes(search) ||
+
+donor.bloodGroup.toLowerCase().includes(search)
+
+);
+
+displayDonors(filtered);
+
+}
+
+/* LOGOUT */
+
+function logout(){
+
+localStorage.clear();
+location="login.html";
+
+}
+
+/* INITIAL LOAD */
+
+loadRequests();
+loadDonors();
+
+</script>
+
+</body>
+</html>

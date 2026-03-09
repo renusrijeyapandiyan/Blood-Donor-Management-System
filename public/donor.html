@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Donor Dashboard | Blood Management</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
+body{
+margin:0;
+font-family:'Segoe UI',sans-serif;
+display:flex;
+background:#f1f5f9;
+}
+
+.sidebar{
+width:250px;
+background:linear-gradient(180deg,#1e293b,#0f172a);
+color:white;
+height:100vh;
+padding:20px;
+}
+
+.sidebar h2{margin-bottom:30px;}
+
+.sidebar button{
+width:100%;
+padding:12px;
+margin-bottom:10px;
+border:none;
+border-radius:8px;
+background:#334155;
+color:white;
+cursor:pointer;
+text-align:left;
+transition:0.3s;
+}
+
+.sidebar button:hover{background:#2563eb;}
+.logout{background:#dc2626 !important;}
+
+.main{flex:1;padding:40px;}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:30px;
+}
+
+.card{
+background:white;
+padding:25px;
+border-radius:14px;
+box-shadow:0 6px 18px rgba(0,0,0,0.08);
+margin-bottom:20px;
+}
+
+.profile-grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+}
+
+label{
+font-size:14px;
+font-weight:600;
+color:#334155;
+}
+
+input,select{
+width:100%;
+padding:10px;
+border-radius:8px;
+border:1px solid #ddd;
+margin-top:5px;
+}
+
+input:disabled,select:disabled{
+background:#f3f4f6;
+}
+
+.btn{
+padding:8px 14px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+margin-right:5px;
+font-weight:bold;
+}
+
+.save{background:#16a34a;color:white;display:none;}
+.edit{background:#2563eb;color:white;}
+.cancel{background:#6b7280;color:white;display:none;}
+
+.accept{background:#16a34a;color:white;}
+.reject{background:#dc2626;color:white;}
+
+.badge{
+padding:5px 10px;
+border-radius:15px;
+font-size:12px;
+font-weight:bold;
+}
+
+.pending{background:#facc15;color:#854d0e;}
+.accepted{background:#22c55e;color:white;}
+rejected{background:#ef4444;color:white;}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+<h2><i class="fa-solid fa-droplet"></i> Donor Panel</h2>
+
+<button onclick="showProfile()">
+<i class="fa-solid fa-user"></i> My Profile
+</button>
+
+<button onclick="loadRequests()">
+<i class="fa-solid fa-list"></i> Blood Requests
+</button>
+
+<button onclick="viewDonors()">
+<i class="fa-solid fa-users"></i> View Donors
+</button>
+
+<button onclick="logout()" class="logout">
+<i class="fa-solid fa-right-from-bracket"></i> Logout
+</button>
+
+</div>
+
+<div class="main">
+
+<div class="header">
+<h1>Welcome Donor</h1>
+</div>
+
+<div id="content"></div>
+
+</div>
+
+<script>
+
+const API="http://localhost:5000";
+const token=localStorage.getItem("token");
+const role=localStorage.getItem("role");
+
+if(!token || role!=="donor"){
+logout();
+}
+
+/* ================= PROFILE ================= */
+
+async function showProfile(){
+
+document.getElementById("content").innerHTML=`
+<div class="card">
+<h3>My Profile</h3>
+
+<div class="profile-grid">
+
+<div>
+<label>Full Name</label>
+<input id="name" disabled>
+</div>
+
+<div>
+<label>Email</label>
+<input id="email" disabled>
+</div>
+
+<div>
+<label>Phone</label>
+<input id="contactNumber" disabled>
+</div>
+
+<div>
+<label>Blood Group</label>
+<select id="bloodGroup" disabled>
+<option value="">Select</option>
+<option>A+</option><option>A-</option>
+<option>B+</option><option>B-</option>
+<option>O+</option><option>O-</option>
+<option>AB+</option><option>AB-</option>
+</select>
+</div>
+
+<div>
+<label>Location</label>
+<input id="location" disabled>
+</div>
+
+<div>
+<label>Date of Birth</label>
+<input type="date" id="dob" disabled>
+</div>
+
+<div>
+<label>Guardian Name</label>
+<input id="guardianName" disabled>
+</div>
+
+<div>
+<label>Guardian Contact</label>
+<input id="guardianContact" disabled>
+</div>
+
+</div><br>
+
+<button class="btn edit" onclick="enableEdit()">Edit</button>
+<button class="btn save" onclick="saveProfile()">Save</button>
+<button class="btn cancel" onclick="showProfile()">Cancel</button>
+
+</div>
+`;
+
+try{
+
+const res=await fetch(API+"/api/donor/profile",{
+headers:{Authorization:"Bearer "+token}
+});
+
+const result=await res.json();
+
+const d=result.data || result;
+
+document.getElementById("name").value=d.name||"";
+document.getElementById("email").value=d.email||"";
+document.getElementById("contactNumber").value=d.contactNumber||"";
+document.getElementById("bloodGroup").value=d.bloodGroup||"";
+document.getElementById("location").value=d.location||"";
+document.getElementById("guardianName").value=d.guardianName||"";
+document.getElementById("guardianContact").value=d.guardianContact||"";
+
+if(d.dob) document.getElementById("dob").value=d.dob.split("T")[0];
+
+}catch(err){
+
+console.error(err);
+alert("Error fetching profile");
+
+}
+
+}
+
+function enableEdit(){
+
+document.querySelectorAll("#content input,#content select").forEach(el=>{
+if(el.id!=="email") el.disabled=false;
+});
+
+document.querySelector(".save").style.display="inline-block";
+document.querySelector(".cancel").style.display="inline-block";
+document.querySelector(".edit").style.display="none";
+
+}
+
+async function saveProfile(){
+
+const data={
+name:document.getElementById("name").value,
+contactNumber:document.getElementById("contactNumber").value,
+bloodGroup:document.getElementById("bloodGroup").value,
+location:document.getElementById("location").value,
+guardianName:document.getElementById("guardianName").value,
+guardianContact:document.getElementById("guardianContact").value,
+dob:document.getElementById("dob").value
+};
+
+try{
+
+const res=await fetch(API+"/api/donor/update",{
+method:"PUT",
+headers:{
+"Content-Type":"application/json",
+Authorization:"Bearer "+token
+},
+body:JSON.stringify(data)
+});
+
+const result=await res.json();
+
+if(res.ok){
+alert("Profile Updated");
+showProfile();
+}else{
+alert(result.message||"Update failed");
+}
+
+}catch(err){
+alert("Error updating profile");
+}
+
+}
+
+/* ================= REQUESTS ================= */
+
+async function loadRequests(){
+
+try{
+
+const res=await fetch(API+"/api/donor/requests",{
+headers:{Authorization:"Bearer "+token}
+});
+
+const result=await res.json();
+const data=result.data||[];
+
+let html="";
+
+if(data.length===0){
+html=`<div class="card">No Blood Requests</div>`;
+}else{
+
+data.forEach(r=>{
+
+html+=`
+<div class="card">
+<h3>Patient: ${r.patient?.name||"Unknown"}</h3>
+
+<p><b>Blood Group:</b> ${r.bloodGroup}</p>
+
+<p>
+<b>Status:</b>
+<span class="badge ${r.status.toLowerCase()}">
+${r.status}
+</span>
+</p>
+
+${r.status==="Pending"?`
+
+<button class="btn accept"
+onclick="handleRequest('${r._id}','accept')">
+Accept
+</button>
+
+<button class="btn reject"
+onclick="handleRequest('${r._id}','reject')">
+Reject
+</button>
+
+`:""}
+
+</div>
+`;
+
+});
+
+}
+
+document.getElementById("content").innerHTML=html;
+
+}catch(err){
+alert("Error loading requests");
+}
+
+}
+
+/* ================= VIEW DONORS ================= */
+
+async function viewDonors(){
+
+try{
+
+const res=await fetch(API+"/api/donor/all",{
+headers:{Authorization:"Bearer "+token}
+});
+
+const result=await res.json();
+const data=result.data||[];
+
+let html="<h2>All Donors</h2>";
+
+data.forEach(d=>{
+
+html+=`
+<div class="card">
+<h3>${d.name}</h3>
+<p><b>Blood Group:</b> ${d.bloodGroup}</p>
+<p><b>Location:</b> ${d.location}</p>
+<p><b>Contact:</b> ${d.contactNumber}</p>
+</div>
+`;
+
+});
+
+document.getElementById("content").innerHTML=html;
+
+}catch(err){
+alert("Error loading donors");
+}
+
+}
+
+/* ================= ACCEPT / REJECT ================= */
+
+async function handleRequest(id,action){
+
+try{
+
+const res=await fetch(API+"/api/donor/"+action+"/"+id,{
+method:"PUT",
+headers:{Authorization:"Bearer "+token}
+});
+
+const result=await res.json();
+
+if(res.ok){
+alert(result.message||"Updated");
+loadRequests();
+}else{
+alert(result.message||"Error");
+}
+
+}catch(err){
+alert("Error processing request");
+}
+
+}
+
+/* ================= LOGOUT ================= */
+
+function logout(){
+localStorage.clear();
+window.location="login.html";
+}
+
+showProfile();
+
+</script>
+
+</body>
+</html>
